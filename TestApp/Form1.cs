@@ -100,6 +100,7 @@
                 Cursor = Cursors.Arrow;
                 downloadImageBtn.Enabled = true;
             }
+
             pictureBox1.Image = image;
             resultsGbox.Visible = true;
         }

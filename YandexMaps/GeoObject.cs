@@ -20,9 +20,9 @@
             Coordinates = coordinates;
         }
 
-        public GeoObject(double longitude, double latitude)
+        public GeoObject(double latitude, double longitude)
         {
-            Coordinates = new Coordinates(longitude, latitude);
+            Coordinates = new Coordinates(latitude, longitude);
         }
 
         public Image GetImage(Size size, int zoom, LabelColor labelColor)
@@ -38,7 +38,7 @@
             }
             var url = string.Format(
                 "http://static-maps.yandex.ru/1.x/?ll={0}&size={1}&z={2}&l=map&pt={0},pm2{3}l",
-                Coordinates,
+                Coordinates.ToApiFormatString(),
                 string.Format("{0},{1}", size.Width, size.Height),
                 zoom,
                 labelColor.GetDescription());

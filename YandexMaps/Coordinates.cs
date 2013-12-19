@@ -5,13 +5,13 @@
 
     public sealed class Coordinates
     {
-        public double Longitude { get; private set; }
         public double Latitude { get; private set; }
+        public double Longitude { get; private set; }
 
-        public Coordinates(double longitude, double latitude)
+        public Coordinates(double latitude, double longitude)
         {
-            Longitude = longitude;
             Latitude = latitude;
+            Longitude = longitude;
         }
 
         public Coordinates(string coordinatesString)
@@ -44,7 +44,16 @@
             var properCulture = GetProperCulture();
             return string.Format(
                 "{0},{1}", 
-                Longitude.ToString(properCulture), 
+                Latitude.ToString(properCulture),
+                Longitude.ToString(properCulture));
+        }
+
+        public string ToApiFormatString()
+        {
+            var properCulture = GetProperCulture();
+            return string.Format(
+                "{0},{1}",
+                Longitude.ToString(properCulture),
                 Latitude.ToString(properCulture));
         }
 

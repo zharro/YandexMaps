@@ -77,14 +77,14 @@
             var url = string.Format(
                 "{0}/?ll={1}&size={2}&z={3}&l=map&pt=",
                 StaticMapsUrl,
-                center.GeoObjects.First().Coordinates,
+                center.GeoObjects.First().Coordinates.ToApiFormatString(),
                 string.Format("{0},{1}", size.Width, size.Height),
                 zoom);
             foreach (var geoObject in geoObjects)
             {
                 url += string.Format(
                     "{0},pm2{1}{2}~", 
-                    geoObject.Key.Coordinates, 
+                    geoObject.Key.Coordinates.ToApiFormatString(), 
                     geoObject.Value.GetDescription(),
                     labelSize);
             }
@@ -143,7 +143,8 @@
                             "Неожиданный формат ответа геокодера (нет поля {0})",
                             "AdministrativeArea");
                     }
-                    administrativeArea = administrativeAreaNode.GetChild("AdministrativeAreaName").InnerText;
+                    var administrativeAreaNameNode = administrativeAreaNode.GetChild("AdministrativeAreaName");
+                    if (administrativeAreaNameNode != null) administrativeArea = administrativeAreaNameNode.InnerText;
                     var subAdministrativeAreaNode = administrativeAreaNode.GetChild("SubAdministrativeArea");
                     if (subAdministrativeAreaNode == null)
                     {
@@ -151,8 +152,9 @@
                             "Неожиданный формат ответа геокодера (нет поля {0})",
                             "SubAdministrativeArea");
                     }
-                    subAdministrativeArea =
-                        subAdministrativeAreaNode.GetChild("SubAdministrativeAreaName").InnerText;
+                    var subAdministrativeAreaNameNode =
+                        subAdministrativeAreaNode.GetChild("SubAdministrativeAreaName");
+                    if (subAdministrativeAreaNameNode != null) subAdministrativeArea = subAdministrativeAreaNameNode.InnerText;
                     var localityNode = subAdministrativeAreaNode.GetChild("Locality");
                     if (localityNode == null)
                     {
@@ -160,7 +162,8 @@
                             "Неожиданный формат ответа геокодера (нет поля {0})",
                             "Locality");
                     }
-                    locality = localityNode.GetChild("LocalityName").InnerText;
+                    var localityNameNode = localityNode.GetChild("LocalityName");
+                    if(localityNameNode != null) locality = localityNameNode.InnerText;
                     var streetNode = localityNode.GetChild("Thoroughfare/ThoroughfareName");
                     if (streetNode == null)
                     {
