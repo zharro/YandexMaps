@@ -6,3 +6,29 @@ YandexMaps
 
 Библиотека также позволяет получать изображения нескольких объектов, расположенных в пределах одного населенного пункта. Этот сценарий в тестовом приложении:
 ![scen2](https://f.cloud.github.com/assets/1455146/1782246/fe284198-68a7-11e3-8f6d-784584207f4a.jpg)
+
+Пример исходного кода работы с библиотекой (синхронно):
+
+            var geoCoder = new GeoCoder();
+            // Найти все гео-объекты, расположенные по адресу 'Москва, ул. Тверская, дом 7'
+            var geoObject1 = geoCoder.SearchObjectsInLocation("Москва, ул. Тверская, дом 7");
+
+            // Результат: address="Россия, Московская область, Москва, Москва, Тверская улица, 7"
+            var address = geoObject1.GeoObjects.First().Address;
+            // Результат: coordinates="55.757962, 37.611006"
+            var coordinates = geoObject1.GeoObjects.First().Coordinates;
+
+            // Получить изображение точки на карте с адресом 'Москва, ул. Тверская, дом 7'
+            // размером 600x400 пикселей и приближением 12 в виде зеленой метки
+            var imageWithOneLabel = geoObject1.GeoObjects.First().GetImage(
+                new Size(600, 400),
+                12,
+                LabelColor.Green);
+
+            var geoObjects = new Dictionary<GeoObject, LabelColor>
+            {
+                {geoObject1.GeoObjects.First(), LabelColor.Red},
+                {new GeoObject(55.796812, 37.617868), LabelColor.Yellow}
+            };
+            // Получить изображение двух объявленных выше точек на карте города Москвы
+            var imageWithTwoLabels = geoCoder.GetImageForObjects("город Москва", new Size(600, 400), 10, geoObjects);
