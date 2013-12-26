@@ -24,7 +24,7 @@
             if (coordinates.Length != 2)
             {
                 throw new ArgumentException(
-                    "Строка имеет неправильный формат. Ожидаемый формат 'log-de,lat-de' или 'log-de lat-de'", 
+                    "Строка имеет неправильный формат. Ожидаемый формат 'longitude,latitude' или 'longitude latitude'", 
                     "coordinatesString");
             }
             var properCulture = GetProperCulture();

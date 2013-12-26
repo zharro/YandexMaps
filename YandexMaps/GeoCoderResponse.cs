@@ -1,5 +1,6 @@
 ﻿namespace YandexMaps
 {
+    using System;
     using System.Collections.Generic;
 
     public sealed class GeoCoderResponse
@@ -16,10 +17,20 @@
         /// </summary>
         public IEnumerable<GeoObject> GeoObjects {get; private set;}
 
+        /// <summary>
+        /// Ошибка, произошедшая при асинхронном вызове
+        /// </summary>
+        public Exception Error { get; private set; }
+
         public GeoCoderResponse(int countOfFoundObjects, IEnumerable<GeoObject> geoObjects)
         {
             CountOfFoundObjects = countOfFoundObjects;
             GeoObjects = geoObjects;
+        }
+
+        public GeoCoderResponse(Exception exception)
+        {
+            Error = exception;
         }
     }
 }

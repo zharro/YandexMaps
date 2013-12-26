@@ -45,6 +45,7 @@
     <Compile Include="EnumExtensions.cs" />
     <Compile Include="GeoObject.cs" />
     <Compile Include="LabelColor.cs" />
+    <Compile Include="StaticMapsResponse.cs" />
     <Compile Include="XmlNodeExtensions.cs" />
     <Compile Include="YandexMapsApiException.cs" />
     <Compile Include="GeoCoderResponse.cs" />

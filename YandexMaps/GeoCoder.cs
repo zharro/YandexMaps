@@ -14,6 +14,16 @@
         private const string StaticMapsUrl = "http://static-maps.yandex.ru/1.x";
 
         /// <summary>
+        /// Клиентский метод обратного вызова при поиске объектов
+        /// </summary>
+        private Action<GeoCoderResponse> _searchObjectsInLocationCallback;
+
+        /// <summary>
+        /// Клиентский метод обратного вызова при загрузке изображения
+        /// </summary>
+        private Action<StaticMapsResponse> _getImageCallback; 
+
+        /// <summary>
         /// Возвращает список гео-объектов, расположенных в заданном местоположении
         /// </summary>
         /// <param name="location">Метоположение, может определяться адресом, либо координатами</param>
@@ -41,6 +51,57 @@
         }
 
         /// <summary>
+        /// Инициирует асинхронный запрос для получения списка объектов по указанному адресу
+        /// </summary>
+        /// <param name="location">Адрес, по которому будем искать объекты</param>
+        /// <param name="callback">Метод обратного вызова, вызываемый при получении ответа</param>
+        public void BeginSearchObjectsInLocation(string location, Action<GeoCoderResponse> callback)
+        {
+            if (String.IsNullOrWhiteSpace(location))
+            {
+                throw new ArgumentException("Пустая строка", "location");
+            }
+            if (callback == null)
+            {
+                throw new ArgumentException("Делегат не определен", "callback");
+            }
+            _searchObjectsInLocationCallback = callback;
+            var request = (HttpWebRequest)WebRequest.Create(GeoCodeUrl + location);
+            request.BeginGetResponse(SearchObjectsCallback, request);
+        }
+
+        /// <summary>
+        /// Обратный вызов, вызывающийся при получении ответа от геокодера
+        /// </summary>
+        /// <param name="asynchronousResult">Результат выполнения операции</param>
+        private void SearchObjectsCallback(IAsyncResult asynchronousResult)
+        {
+            GeoCoderResponse result;
+            var requestState = (HttpWebRequest)asynchronousResult.AsyncState;
+            try
+            {
+                using (var response = requestState.EndGetResponse(asynchronousResult))
+                {
+                    using (var responseStream = response.GetResponseStream())
+                    {
+                        if (responseStream == null)
+                        {
+                            throw new YandexMapsApiException("Ответ геокодера содержит пустой поток");
+                        }
+                        int countOfFoundObjects;
+                        var geoObjects = ParseGeoResponse(responseStream, out countOfFoundObjects);
+                        result = new GeoCoderResponse(countOfFoundObjects, geoObjects);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                result = new GeoCoderResponse(e);
+            }
+            _searchObjectsInLocationCallback(result);
+        }
+
+        /// <summary>
         /// Возвращает изображение карты города с нанесенными метками
         /// </summary>
         /// <param name="locality">Название населенного пункта</param>
@@ -61,34 +122,17 @@
             if (size.Width < 0 || size.Width > 650 ||
                 size.Height < 0 || size.Height > 450)
             {
-                throw new ArgumentException("Максимальное значение параметра: 650x450 пикселей", "size");
+                throw new ArgumentOutOfRangeException("size", "Максимальное значение параметра: 650x450 пикселей");
             }
             if (zoom < 0 || zoom > 17)
             {
-                throw new ArgumentException("Значение параметра должно быть в пределах от 0 до 17", "zoom");
+                throw new ArgumentOutOfRangeException("zoom", "Значение параметра должно быть в пределах от 0 до 17");
             }
             if (geoObjects.Count > 100)
             {
-                throw new ArgumentException("Максимальное число меток на карте: 100", "geoObjects");
+                throw new ArgumentOutOfRangeException("geoObjects", "Максимальное число меток на карте: 100");
             }
-            var labelSize = geoObjects.Count > 20 ? "m" : "l";
-            // Загрузим координаты центра города, будем использовать их как центр создаваемой карты
-            var center = SearchObjectsInLocation(locality);
-            var url = string.Format(
-                "{0}/?ll={1}&size={2}&z={3}&l=map&pt=",
-                StaticMapsUrl,
-                center.GeoObjects.First().Coordinates.ToApiFormatString(),
-                string.Format("{0},{1}", size.Width, size.Height),
-                zoom);
-            foreach (var geoObject in geoObjects)
-            {
-                url += string.Format(
-                    "{0},pm2{1}{2}~", 
-                    geoObject.Key.Coordinates.ToApiFormatString(), 
-                    geoObject.Value.GetDescription(),
-                    labelSize);
-            }
-            url = url.Remove(url.Length - 1);
+            var url = ConstructStaticMapsUrl(locality, size, zoom, geoObjects);
             var request = (HttpWebRequest)WebRequest.Create(url);
             Image resultImage;
             using (var response = request.GetResponse())
@@ -103,6 +147,108 @@
                 }
             }
             return resultImage;
+        }
+
+        /// <summary>
+        /// Инициирует асинхронный запрос для получения изображения гео-объектов
+        /// </summary>
+        /// <param name="locality">Название населенного пункта</param>
+        /// <param name="size">Размер карты</param>
+        /// <param name="zoom">Zoom карты</param>
+        /// <param name="geoObjects">Метки</param>
+        /// <param name="callback">Метод обратного вызова, вызываемый при получении ответа</param>
+        public void BeginGetImageForObjects(
+            string locality,
+            Size size,
+            int zoom,
+            IDictionary<GeoObject, LabelColor> geoObjects,
+            Action<StaticMapsResponse> callback)
+        {
+            if (string.IsNullOrWhiteSpace(locality))
+            {
+                throw new ArgumentException("Пустая строка", "locality");
+            }
+            if (size.Width < 0 || size.Width > 650 ||
+                size.Height < 0 || size.Height > 450)
+            {
+                throw new ArgumentOutOfRangeException("size", "Максимальное значение параметра: 650x450 пикселей");
+            }
+            if (zoom < 0 || zoom > 17)
+            {
+                throw new ArgumentOutOfRangeException("zoom", "Значение параметра должно быть в пределах от 0 до 17");
+            }
+            if (geoObjects.Count > 100)
+            {
+                throw new ArgumentOutOfRangeException("geoObjects", "Максимальное число меток на карте: 100");
+            }
+            _getImageCallback = callback;
+            var url = ConstructStaticMapsUrl(locality, size, zoom, geoObjects);
+            var request = (HttpWebRequest)WebRequest.Create(url);
+            request.BeginGetResponse(GetImageCallback, request);
+        }
+
+        /// <summary>
+        /// Метод обратного вызова, вызываемый при получении ответа от Static Maps API
+        /// </summary>
+        /// <param name="asynchronousResult">Результат выполнения операции</param>
+        private void GetImageCallback(IAsyncResult asynchronousResult)
+        {
+            StaticMapsResponse result;
+            var requestState = (HttpWebRequest)asynchronousResult.AsyncState;
+            try
+            {
+                using (var response = requestState.EndGetResponse(asynchronousResult))
+                {
+                    using (var responseStream = response.GetResponseStream())
+                    {
+                        if (responseStream == null)
+                        {
+                            throw new YandexMapsApiException("Ответ геокодера содержит пустой поток");
+                        }
+                        var map = Image.FromStream(responseStream);
+                        result = new StaticMapsResponse(map);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                result = new StaticMapsResponse(e);
+            }
+            _getImageCallback(result);
+        }
+
+        /// <summary>
+        /// Сформировать URL для запроса нужного избражения
+        /// </summary>
+        /// <param name="locality">Название населенного пункта</param>
+        /// <param name="size">Размер карты</param>
+        /// <param name="zoom">Zoom карты</param>
+        /// <param name="geoObjects">Метки</param>
+        /// <returns>URL</returns>
+        private string ConstructStaticMapsUrl(
+            string locality,
+            Size size,
+            int zoom,
+            IDictionary<GeoObject, LabelColor> geoObjects)
+        {
+            var labelSize = geoObjects.Count > 20 ? "m" : "l";
+            // Загрузим координаты центра города, будем использовать их как центр создаваемой карты
+            var center = SearchObjectsInLocation(locality);
+            var url = string.Format(
+                "{0}/?ll={1}&size={2}&z={3}&l=map&pt=",
+                StaticMapsUrl,
+                center.GeoObjects.First().Coordinates.ToApiFormatString(),
+                string.Format("{0},{1}", size.Width, size.Height),
+                zoom);
+            foreach (var geoObject in geoObjects)
+            {
+                url += string.Format(
+                    "{0},pm2{1}{2}~",
+                    geoObject.Key.Coordinates.ToApiFormatString(),
+                    geoObject.Value.GetDescription(),
+                    labelSize);
+            }
+            return url.Remove(url.Length - 1);
         }
 
         /// <summary>
